@@ -1,37 +1,13 @@
 import streamlit as st
 import joblib
 import numpy as np
-from sklearn.preprocessing import FunctionTransformer, StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
 
 # Path to the saved model
-MODEL_PATH = "./RandomForestClassifier_final_model.joblib"
+MODEL_PATH = "RandomForestClassifier_final_model.joblib"
 
-# Define the preprocessing steps
-numeric_features = ['Engine_Size', 'Cylinders', 'Fuel_Consumption_Comb']
-categorical_features = ['Vehicle_Class', 'Fuel_Type', 'Transmission']
-
-# Define preprocessing for numerical features
-numeric_transformer = Pipeline(steps=[
-    ('log', FunctionTransformer(np.log1p, validate=True)),
-    ('scaler', StandardScaler())
-])
-
-# Define preprocessing for categorical features
-categorical_transformer = Pipeline(steps=[
-    ('onehot', OneHotEncoder(handle_unknown='ignore'))
-])
-
-# Combine preprocessing for numeric and categorical features
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numeric_transformer, numeric_features),
-        ('cat', categorical_transformer, categorical_features)
-    ]
-)
-
-# Function to load the model
 @st.cache_resource
 def load_model():
     try:
@@ -58,31 +34,30 @@ fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hyb
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
 # Map categorical inputs to numerical representations
-vehicle_class_map = {"Compact": "Compact", "SUV": "SUV", "Sedan": "Sedan", "Truck": "Truck", "Van": "Van", "Crossover": "Crossover", "Other": "Other"}
-fuel_type_map = {"Gasoline": "Gasoline", "Diesel": "Diesel", "Electricity": "Electricity", "Hybrid": "Hybrid", "Other": "Other"}
-transmission_map = {"Automatic": "Automatic", "Manual": "Manual", "CVT": "CVT", "Other": "Other"}
+vehicle_class_map = {"Compact": 0, "SUV": 1, "Sedan": 2, "Truck": 3, "Van": 4, "Crossover": 5, "Other": 6}
+fuel_type_map = {"Gasoline": 0, "Diesel": 1, "Electricity": 2, "Hybrid": 3, "Other": 4}
+transmission_map = {"Automatic": 0, "Manual": 1, "CVT": 2, "Other": 3}
+
+# Preprocess features
+def preprocess_features(engine_size, cylinders, fuel_consumption, vehicle_class, fuel_type, transmission):
+    features = np.array([
+        [
+            engine_size,
+            cylinders,
+            fuel_consumption,
+            vehicle_class_map[vehicle_class],
+            fuel_type_map[fuel_type],
+            transmission_map[transmission],
+        ]
+    ])
+    return features
 
 # Predict button
 if st.button("Predict"):
     if model:
-        # Prepare raw input as a DataFrame-like structure for preprocessing
-        raw_features = np.array([
-            [
-                engine_size,
-                cylinders,
-                fuel_consumption,
-                vehicle_class_map[vehicle_class],
-                fuel_type_map[fuel_type],
-                transmission_map[transmission]
-            ]
-        ], dtype=object)
-
+        features = preprocess_features(engine_size, cylinders, fuel_consumption, vehicle_class, fuel_type, transmission)
         try:
-            # Apply preprocessing
-            preprocessed_features = preprocessor.transform(raw_features)
-
-            # Get the prediction
-            prediction = model.predict(preprocessed_features)
+            prediction = model.predict(features)
             st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
