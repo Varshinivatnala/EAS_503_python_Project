@@ -3,8 +3,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
 
 # Path to the saved model
 MODEL_PATH = "RandomForestClassifier_final_model.joblib"
@@ -19,8 +19,9 @@ def load_model():
         st.error(f"Failed to load model: {e}")
         return None
 
-# Define preprocessing steps (as used during training)
-def create_preprocessor():
+@st.cache_resource
+def load_preprocessor():
+    # Recreate preprocessing pipeline used during training
     numeric_features = ['Engine Size', 'Cylinders', 'Fuel Consumption']
     categorical_features = ['Vehicle Class', 'Fuel Type', 'Transmission']
     
@@ -40,11 +41,12 @@ def create_preprocessor():
             ('cat', categorical_transformer, categorical_features)
         ]
     )
+    # Return the fitted preprocessor with the correct features
     return preprocessor
 
 # Load the model and preprocessor
 model = load_model()
-preprocessor = create_preprocessor()
+preprocessor = load_preprocessor()
 
 # Page title
 st.title("CO2 Emissions Classification App")
@@ -58,29 +60,24 @@ vehicle_class = st.selectbox("Vehicle Class", ["Compact", "SUV", "Sedan", "Truck
 fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hybrid", "Other"])
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
-# Map categorical inputs to expected column names
-vehicle_class_map = {"Compact": "Compact", "SUV": "SUV", "Sedan": "Sedan", "Truck": "Truck", "Van": "Van", "Crossover": "Crossover", "Other": "Other"}
-fuel_type_map = {"Gasoline": "Gasoline", "Diesel": "Diesel", "Electricity": "Electricity", "Hybrid": "Hybrid", "Other": "Other"}
-transmission_map = {"Automatic": "Automatic", "Manual": "Manual", "CVT": "CVT", "Other": "Other"}
-
 # Predict button
 if st.button("Predict"):
     if model:
-        # Prepare input features as a DataFrame
+        # Prepare input data
         input_data = pd.DataFrame({
             'Engine Size': [engine_size],
             'Cylinders': [cylinders],
             'Fuel Consumption': [fuel_consumption],
-            'Vehicle Class': [vehicle_class_map[vehicle_class]],
-            'Fuel Type': [fuel_type_map[fuel_type]],
-            'Transmission': [transmission_map[transmission]],
+            'Vehicle Class': [vehicle_class],
+            'Fuel Type': [fuel_type],
+            'Transmission': [transmission],
         })
-
+        
         try:
-            # Apply preprocessing
+            # Preprocess the input data
             features_preprocessed = preprocessor.fit_transform(input_data)
             
-            # Get prediction
+            # Make prediction
             prediction = model.predict(features_preprocessed)
             st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
         except Exception as e:
