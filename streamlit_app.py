@@ -39,13 +39,17 @@ if st.button("Predict"):
         try:
             # Prepare input data as a pandas DataFrame
             input_data = pd.DataFrame({
-                "Engine Size": [engine_size],
+                "Engine Size(L)": [engine_size],
                 "Cylinders": [cylinders],
-                "Fuel Consumption": [fuel_consumption],
+                "Fuel Consumption Comb (L/100 km)": [fuel_consumption],
                 "Vehicle Class": [vehicle_class],
                 "Fuel Type": [fuel_type],
                 "Transmission": [transmission]
             })
+            
+            # Compute engineered features
+            input_data["Engine_Cylinders_Ratio"] = input_data["Engine Size(L)"] / (input_data["Cylinders"] + 1)
+            input_data["Fuel_Consumption_per_Cylinder"] = input_data["Fuel Consumption Comb (L/100 km)"] / (input_data["Cylinders"] + 1)
             
             # Make prediction using the model
             prediction = model.predict(input_data)
