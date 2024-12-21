@@ -4,7 +4,7 @@ import joblib
 import numpy as np
 
 # Path to the saved model
-MODEL_PATH = ""
+MODEL_PATH = "RandomForestClassifier_final_model.joblib"
 
 # Function to load the model
 @st.cache_resource
