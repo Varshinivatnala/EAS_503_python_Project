@@ -21,6 +21,13 @@ def load_model():
 # Load the model
 model = load_model()
 
+# Category descriptions
+category_meanings = {
+    0: "Low CO2 Emissions",
+    1: "Medium CO2 Emissions",
+    2: "High CO2 Emissions"
+}
+
 # Page title
 st.title("CO2 Emissions Classification App")
 
@@ -53,7 +60,9 @@ if st.button("Predict"):
             
             # Make prediction using the model
             prediction = model.predict(input_data)
-            st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
+            predicted_category = prediction[0]
+            category_description = category_meanings.get(predicted_category, "Unknown Category")
+            st.success(f"Predicted CO2 Emissions Category: {predicted_category} ({category_description})")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
     else:
