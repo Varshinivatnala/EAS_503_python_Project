@@ -2,8 +2,8 @@ import streamlit as st
 import joblib
 import numpy as np
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
 
 # Path to the saved model
 MODEL_PATH = "RandomForestClassifier_final_model.joblib"
@@ -18,8 +18,32 @@ def load_model():
         st.error(f"Failed to load model: {e}")
         return None
 
-# Load the model
+# Define preprocessing steps (as used during training)
+def create_preprocessor():
+    numeric_features = ['Engine Size', 'Cylinders', 'Fuel Consumption']
+    categorical_features = ['Vehicle Class', 'Fuel Type', 'Transmission']
+    
+    numeric_transformer = Pipeline(steps=[
+        ('log', FunctionTransformer(np.log1p, validate=True)),
+        ('scaler', StandardScaler()),
+        ('minmax', MinMaxScaler())
+    ])
+    
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+    
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numeric_transformer, numeric_features),
+            ('cat', categorical_transformer, categorical_features)
+        ]
+    )
+    return preprocessor
+
+# Load the model and preprocessor
 model = load_model()
+preprocessor = create_preprocessor()
 
 # Page title
 st.title("CO2 Emissions Classification App")
@@ -33,31 +57,29 @@ vehicle_class = st.selectbox("Vehicle Class", ["Compact", "SUV", "Sedan", "Truck
 fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hybrid", "Other"])
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
-# Map categorical inputs to numerical representations
-vehicle_class_map = {"Compact": 0, "SUV": 1, "Sedan": 2, "Truck": 3, "Van": 4, "Crossover": 5, "Other": 6}
-fuel_type_map = {"Gasoline": 0, "Diesel": 1, "Electricity": 2, "Hybrid": 3, "Other": 4}
-transmission_map = {"Automatic": 0, "Manual": 1, "CVT": 2, "Other": 3}
-
-# Preprocess features
-def preprocess_features(engine_size, cylinders, fuel_consumption, vehicle_class, fuel_type, transmission):
-    features = np.array([
-        [
-            engine_size,
-            cylinders,
-            fuel_consumption,
-            vehicle_class_map[vehicle_class],
-            fuel_type_map[fuel_type],
-            transmission_map[transmission],
-        ]
-    ])
-    return features
+# Map categorical inputs to expected column names
+vehicle_class_map = {"Compact": "Compact", "SUV": "SUV", "Sedan": "Sedan", "Truck": "Truck", "Van": "Van", "Crossover": "Crossover", "Other": "Other"}
+fuel_type_map = {"Gasoline": "Gasoline", "Diesel": "Diesel", "Electricity": "Electricity", "Hybrid": "Hybrid", "Other": "Other"}
+transmission_map = {"Automatic": "Automatic", "Manual": "Manual", "CVT": "CVT", "Other": "Other"}
 
 # Predict button
 if st.button("Predict"):
     if model:
-        features = preprocess_features(engine_size, cylinders, fuel_consumption, vehicle_class, fuel_type, transmission)
+        # Prepare input features
+        features_dict = {
+            'Engine Size': [engine_size],
+            'Cylinders': [cylinders],
+            'Fuel Consumption': [fuel_consumption],
+            'Vehicle Class': [vehicle_class_map[vehicle_class]],
+            'Fuel Type': [fuel_type_map[fuel_type]],
+            'Transmission': [transmission_map[transmission]],
+        }
         try:
-            prediction = model.predict(features)
+            # Apply preprocessing
+            features_preprocessed = preprocessor.fit_transform(features_dict)
+            
+            # Get prediction
+            prediction = model.predict(features_preprocessed)
             st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
