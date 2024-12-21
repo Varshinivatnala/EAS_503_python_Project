@@ -1,6 +1,7 @@
 import streamlit as st
 import joblib
 import numpy as np
+import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -65,18 +66,19 @@ transmission_map = {"Automatic": "Automatic", "Manual": "Manual", "CVT": "CVT", 
 # Predict button
 if st.button("Predict"):
     if model:
-        # Prepare input features
-        features_dict = {
+        # Prepare input features as a DataFrame
+        input_data = pd.DataFrame({
             'Engine Size': [engine_size],
             'Cylinders': [cylinders],
             'Fuel Consumption': [fuel_consumption],
             'Vehicle Class': [vehicle_class_map[vehicle_class]],
             'Fuel Type': [fuel_type_map[fuel_type]],
             'Transmission': [transmission_map[transmission]],
-        }
+        })
+
         try:
             # Apply preprocessing
-            features_preprocessed = preprocessor.fit_transform(features_dict)
+            features_preprocessed = preprocessor.fit_transform(input_data)
             
             # Get prediction
             prediction = model.predict(features_preprocessed)
