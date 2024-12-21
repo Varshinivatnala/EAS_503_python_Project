@@ -1,6 +1,7 @@
 import streamlit as st
 import joblib
 import numpy as np
+import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
@@ -44,22 +45,22 @@ vehicle_class = st.selectbox("Vehicle Class", ["Compact", "SUV", "Sedan", "Truck
 fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hybrid", "Other"])
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
-# Map categorical inputs to a dataframe-like structure
-input_data = {
-    "Engine Size": [engine_size],
-    "Cylinders": [cylinders],
-    "Fuel Consumption": [fuel_consumption],
-    "Vehicle Class": [vehicle_class],
-    "Fuel Type": [fuel_type],
-    "Transmission": [transmission],
-}
-
 # Predict button
 if st.button("Predict"):
     if model:
         try:
-            # Preprocess input to match model's expected input
-            input_features = preprocessor.fit_transform(input_data)
+            # Prepare input data as a pandas DataFrame
+            input_data = pd.DataFrame({
+                "Engine Size": [engine_size],
+                "Cylinders": [cylinders],
+                "Fuel Consumption": [fuel_consumption],
+                "Vehicle Class": [vehicle_class],
+                "Fuel Type": [fuel_type],
+                "Transmission": [transmission]
+            })
+            
+            # Preprocess the input data
+            input_features = preprocessor.transform(input_data)
             
             # Make prediction
             prediction = model.predict(input_features)
