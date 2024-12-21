@@ -7,7 +7,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
 
 # Path to the saved model
-MODEL_PATH = "RandomForestClassifier_updaetd_final_model.joblib"
+MODEL_PATH = "best_model_832de4e254ca4019983e4e5d12d78eb7.joblib"
 
 @st.cache_resource
 def load_model():
