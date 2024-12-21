@@ -1,6 +1,7 @@
 import streamlit as st
 import joblib
 import numpy as np
+import pandas as pd
 
 # Path to the saved model
 MODEL_PATH = "RandomForestClassifier_final_model.joblib"
@@ -9,22 +10,23 @@ MODEL_PATH = "RandomForestClassifier_final_model.joblib"
 @st.cache_resource
 def load_model():
     try:
+        # Load the full pipeline, including preprocessing and the model
         model = joblib.load(MODEL_PATH)
-        st.session_state["model_loaded"] = True
+        st.success("Model loaded successfully!")
         return model
     except Exception as e:
         st.error(f"Failed to load model: {e}")
         return None
 
 # Load the model
-if "model_loaded" not in st.session_state:
-    st.session_state["model_loaded"] = False
-
 model = load_model()
 
-if model and st.session_state["model_loaded"]:
-    st.success("Model loaded successfully!")
-    st.session_state["model_loaded"] = False
+# Category descriptions
+category_meanings = {
+    0: "Low CO2 Emissions",
+    1: "Medium CO2 Emissions",
+    2: "High CO2 Emissions"
+}
 
 # Page title
 st.title("CO2 Emissions Classification App")
@@ -38,30 +40,29 @@ vehicle_class = st.selectbox("Vehicle Class", ["Compact", "SUV", "Sedan", "Truck
 fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hybrid", "Other"])
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
-# Map categorical inputs to numerical representations
-vehicle_class_map = {"Compact": 0, "SUV": 1, "Sedan": 2, "Truck": 3, "Van": 4, "Crossover": 5, "Other": 6}
-fuel_type_map = {"Gasoline": 0, "Diesel": 1, "Electricity": 2, "Hybrid": 3, "Other": 4}
-transmission_map = {"Automatic": 0, "Manual": 1, "CVT": 2, "Other": 3}
-
 # Predict button
 if st.button("Predict"):
     if model:
-        # Prepare features for the model
-        features = np.array([
-            [
-                engine_size,
-                cylinders,
-                fuel_consumption,
-                vehicle_class_map[vehicle_class],
-                fuel_type_map[fuel_type],
-                transmission_map[transmission],
-            ]
-        ])
-
         try:
-            # Get the prediction
-            prediction = model.predict(features)
-            st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
+            # Prepare input data as a pandas DataFrame
+            input_data = pd.DataFrame({
+                "Engine Size(L)": [engine_size],
+                "Cylinders": [cylinders],
+                "Fuel Consumption Comb (L/100 km)": [fuel_consumption],
+                "Vehicle Class": [vehicle_class],
+                "Fuel Type": [fuel_type],
+                "Transmission": [transmission]
+            })
+            
+            # Compute engineered features
+            input_data["Engine_Cylinders_Ratio"] = input_data["Engine Size(L)"] / (input_data["Cylinders"] + 1)
+            input_data["Fuel_Consumption_per_Cylinder"] = input_data["Fuel Consumption Comb (L/100 km)"] / (input_data["Cylinders"] + 1)
+            
+            # Make prediction using the model
+            prediction = model.predict(input_data)
+            predicted_category = prediction[0]
+            category_description = category_meanings.get(predicted_category, "Unknown Category")
+            st.success(f"Predicted CO2 Emissions Category: {predicted_category} ({category_description})")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
     else:
