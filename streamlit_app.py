@@ -2,27 +2,15 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 # Path to the saved model
 MODEL_PATH = "RandomForestClassifier_final_model.joblib"
-
-# Preprocessing logic (matches training pipeline)
-numeric_features = ["Engine Size", "Cylinders", "Fuel Consumption"]
-categorical_features = ["Vehicle Class", "Fuel Type", "Transmission"]
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("num", StandardScaler(), numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-    ]
-)
 
 # Function to load the model
 @st.cache_resource
 def load_model():
     try:
+        # Load the full pipeline, including preprocessing and the model
         model = joblib.load(MODEL_PATH)
         st.success("Model loaded successfully!")
         return model
@@ -59,11 +47,8 @@ if st.button("Predict"):
                 "Transmission": [transmission]
             })
             
-            # Preprocess the input data
-            input_features = preprocessor.transform(input_data)
-            
-            # Make prediction
-            prediction = model.predict(input_features)
+            # Make prediction using the model
+            prediction = model.predict(input_data)
             st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
