@@ -1,14 +1,24 @@
 import streamlit as st
 import joblib
 import numpy as np
-import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 # Path to the saved model
-MODEL_PATH = "best_model_832de4e254ca4019983e4e5d12d78eb7.joblib"
+MODEL_PATH = "RandomForestClassifier_final_model.joblib"
 
+# Preprocessing logic (matches training pipeline)
+numeric_features = ["Engine Size", "Cylinders", "Fuel Consumption"]
+categorical_features = ["Vehicle Class", "Fuel Type", "Transmission"]
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", StandardScaler(), numeric_features),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
+    ]
+)
+
+# Function to load the model
 @st.cache_resource
 def load_model():
     try:
@@ -19,34 +29,8 @@ def load_model():
         st.error(f"Failed to load model: {e}")
         return None
 
-@st.cache_resource
-def load_preprocessor():
-    # Recreate preprocessing pipeline used during training
-    numeric_features = ['Engine Size', 'Cylinders', 'Fuel Consumption']
-    categorical_features = ['Vehicle Class', 'Fuel Type', 'Transmission']
-    
-    numeric_transformer = Pipeline(steps=[
-        ('log', FunctionTransformer(np.log1p, validate=True)),
-        ('scaler', StandardScaler()),
-        ('minmax', MinMaxScaler())
-    ])
-    
-    categorical_transformer = Pipeline(steps=[
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
-    
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
-        ]
-    )
-    # Return the fitted preprocessor with the correct features
-    return preprocessor
-
-# Load the model and preprocessor
+# Load the model
 model = load_model()
-preprocessor = load_preprocessor()
 
 # Page title
 st.title("CO2 Emissions Classification App")
@@ -60,25 +44,25 @@ vehicle_class = st.selectbox("Vehicle Class", ["Compact", "SUV", "Sedan", "Truck
 fuel_type = st.selectbox("Fuel Type", ["Gasoline", "Diesel", "Electricity", "Hybrid", "Other"])
 transmission = st.selectbox("Transmission Type", ["Automatic", "Manual", "CVT", "Other"])
 
+# Map categorical inputs to a dataframe-like structure
+input_data = {
+    "Engine Size": [engine_size],
+    "Cylinders": [cylinders],
+    "Fuel Consumption": [fuel_consumption],
+    "Vehicle Class": [vehicle_class],
+    "Fuel Type": [fuel_type],
+    "Transmission": [transmission],
+}
+
 # Predict button
 if st.button("Predict"):
     if model:
-        # Prepare input data
-        input_data = pd.DataFrame({
-            'Engine Size': [engine_size],
-            'Cylinders': [cylinders],
-            'Fuel Consumption': [fuel_consumption],
-            'Vehicle Class': [vehicle_class],
-            'Fuel Type': [fuel_type],
-            'Transmission': [transmission],
-        })
-        
         try:
-            # Preprocess the input data
-            features_preprocessed = preprocessor.fit_transform(input_data)
+            # Preprocess input to match model's expected input
+            input_features = preprocessor.fit_transform(input_data)
             
             # Make prediction
-            prediction = model.predict(features_preprocessed)
+            prediction = model.predict(input_features)
             st.success(f"Predicted CO2 Emissions Category: {prediction[0]}")
         except Exception as e:
             st.error(f"Failed to make a prediction: {e}")
